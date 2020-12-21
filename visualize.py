@@ -2,14 +2,48 @@
 
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import numpy as np
 import pandas as pd
-import math
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
 
+### predicted unit price ###
+predict = dict()
+price = {
+    "agg": [],
+    "sr": [],
+    "cement": [],
+    "sand": [],
+    "glass": [],
+    "salary": [],
+    "water": []
+}
 
+with open('materialPredict.txt', 'r') as d:
+    amount = d.readlines()
+    d.close()
+    for line in amount:
+        index = line.find("=")
+        name = line[:index]
+        history = line[index+2:-2].split(",")
+        new = []
+        key = name.split("_")[1].lower()
+        for i, h in enumerate(history):
+            m = 0
+            try:
+                m = int(h)
+            except ValueError:
+                m = round(float(h),2)
+            finally:
+                if i % 3 == 0:
+                    # print(key)
+                    # print(price[key])
+                    price[key].append(m)
+                new.append(m)
+        predict[name] = new
+
+
+### generate x axis ###
 def genDateRange():
     import datetime
     start_date = datetime.date(2014,8,1)
@@ -18,9 +52,121 @@ def genDateRange():
     date_range = date_range[date_range.day==1]
     return date_range
 
+def genPredictDateRange():
+    import datetime
+    start_date = datetime.date(2021,1,1)
+    end_date = datetime.date(2021,10,1)
+    date_range = pd.date_range(start_date, end_date)
+    date_range = date_range[date_range.day==1]
+    return date_range
+
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
+
+# number of recorded months
+xlen = (2019-2014+1)*12 + 8
+# number of factors
+ynum = 5
+
+### phase cost ###
+phaseMaterial = {
+    "G/F": {
+        "CONCRETE": 957.38,
+        "GLASS": 329.0,
+    },
+    "1/F": {
+        "CONCRETE": 392.37,
+        "GLASS": 1053.0
+    }, 
+    "2/F": {
+        "CONCRETE": 370.8,
+        "GLASS": 470.0
+    }, 
+    "3/F": {
+        "CONCRETE": 349.17,
+        "GLASS": 455.0
+    }, 
+    "4/F": {
+        "CONCRETE": 363.39,
+        "GLASS": 469.0
+    }, 
+    "5/F": {
+        "CONCRETE": 347.27,
+        "GLASS": 443.0
+    },
+    "RF": {
+        "CONCRETE": 344.86,
+        "GLASS": 10.0
+    }
+}
+
+## figure set ##
+rnum = 7
+cnum = 1
+
+# density of each material
+com = {
+    "AGG": 1252,
+    # 0.025 * 8000
+    "SR": 200, 
+    "CEMENT": 461,
+    "SAND": 512,
+    "WATER": 175,
+    "GLASS": 1,
+    "SALARY": 300
+}
+
+import plotly.express as px
+phaseX = ["G/F", "1/F", "2/F", "3/F", "4/F", "5/F","RF", "Curtain Wall"]
+ptCost = []
+
+glass = 0
+for i, k in enumerate(phaseX[:-1]):
+    vol = phaseMaterial[k]
+    conVol = vol["CONCRETE"]
+    glassVol = vol["GLASS"]
+    conTotal = conVol * \
+        (1.4 * 
+        ( com["AGG"]*price["agg"][i] \
+            + com["CEMENT"]*price["cement"][i] \
+            + com["SAND"]*price["sand"][i] \
+            + com["WATER"]*7.11 
+        ) \
+        + 0.025*8000*price["sr"][i] )
+    labor = com["SALARY"] * price["salary"][i]
+    floorCost = labor + conTotal
+    ptCost.append(floorCost)
+    glass = glass + 300 + glassVol * 1 * ( price["glass"][-1]*5)
+
+finalPhase = glass + price["salary"][-1]*com["SALARY"]
+ptCost.append(finalPhase)
+
+tcostFig = px.bar(x=phaseX,y=ptCost, labels={'x':'Floor', 'y':'Total Cost'})
+tcostFig.update_layout(title_text="Total Cost by Floor")
+
+
+### predicted total cost ###
+preFig = make_subplots(rows=rnum, cols=cnum, shared_xaxes=False, shared_yaxes=False)
+
+for i, (k, v) in enumerate(predict.items()):
+    nrow = i + 1
+    ncol = 1
+    
+    subfig = go.Scattergl(x=genPredictDateRange(),y=v,name=k)
+    preFig.add_trace(
+        subfig,
+        row=nrow,col=ncol
+    )
+    preFig.update_yaxes(
+        type="linear",
+        row=nrow,
+        col=ncol)
+
+preFig.update_layout(title="Predicted Material Cost")
+
+
+### material ###
 final = {}
 with open('testMaterial.txt', 'r') as d:
     amount = d.readlines()
@@ -33,64 +179,19 @@ with open('testMaterial.txt', 'r') as d:
         # [round(math.log(10, int(h)),2) for h in history]
         final[name] = history
 
-
-# number of recorded months
-xlen = (2019-2014+1)*12 + 8
-# number of factors
-ynum = 5
-
-import plotly.express as px
-phaseX = ["G/F", "1/F", "2/F", "3/F", "4/F", "5/F","RF"]
-ptCost = [1,2,3,4,5,6,7]
-tcostFig = px.bar(x=phaseX,y=ptCost, labels={'x':'Floor', 'y':'Total Cost'})
-tcostFig.update_layout(title_text="Total Cost by Floor")
-
-
-### phase cost ###
-
-## figure set ##
-rnum = 4
-cnum = 1
-
-# comsuption of each material
-com = {
-    "AGG": 1252,
-    "CEMENT": 461,
-    "SAND": 512,
-    "WATER": 175/1000
-}
-
-### material price ###
-fig = make_subplots(rows=rnum, cols=cnum, shared_xaxes=False, shared_yaxes=False)
-
-for i, (k, v) in enumerate(final.items()):
-    nrow = i//cnum + 1
-    ncol = i%cnum + 1
-
-    subfig = go.Scatter(x=genDateRange(),y=v,name=k)
-    fig.add_trace(
-        subfig,
-        row=nrow,col=ncol
-    )
-    fig.update_yaxes(
-        type="linear",
-        row=nrow,
-        col=ncol)
-
-fig.update_layout(title="Material Price")
-# fig.show()
-
 ### material cost ###
-costFig = make_subplots(rows=nrow, cols=ncol, shared_xaxes=False, shared_yaxes=False)
+costFig = make_subplots(rows=rnum, cols=ncol, shared_xaxes=False, shared_yaxes=False)
 
 for i, (k, v) in enumerate(final.items()):
-    nrow = i//cnum + 1
-    ncol = i%cnum + 1
+    nrow = i+1
+    ncol = 1
 
     # compute comsumed price
     name = k.split("_")[1]
+    if k == "SALARY" or k == "GLASS":
+        continue
     if name in com:
-        v = [com[name]*d*5.92 for d in v]
+        v = [com[name]*1.4*d for d in v]
     else:
         continue
     
@@ -104,7 +205,28 @@ for i, (k, v) in enumerate(final.items()):
         row=nrow,
         col=ncol)
 
-costFig.update_layout(title="Material Total Cost")
+costFig.update_layout(title="Volume Concrete Price")
+
+
+### material price history ###
+fig = make_subplots(rows=rnum, cols=cnum, shared_xaxes=False, shared_yaxes=False)
+
+for i, (k, v) in enumerate(final.items()):
+    nrow = i+1
+    ncol = 1
+
+    subfig = go.Scatter(x=genDateRange(),y=v,name=k)
+    fig.add_trace(
+        subfig,
+        row=nrow,col=ncol
+    )
+    fig.update_yaxes(
+        type="linear",
+        row=nrow,
+        col=ncol)
+
+fig.update_layout(title="Volume Concrete Price Hisotry")
+
 
 ## do NOT modify the following code
 app.layout = html.Div(children=[
@@ -120,14 +242,19 @@ app.layout = html.Div(children=[
     ),
 
     dcc.Graph(
+        id='predict-cost',
+        figure=preFig
+    ),
+
+    dcc.Graph(
         id='material-price',
         figure=costFig
     ),
 
-    #  dcc.Graph(
-    #     id='material-cost',
-    #     figure=fig
-    # )
+     dcc.Graph(
+        id='material-cost',
+        figure=fig
+    )
 ])
 
 
