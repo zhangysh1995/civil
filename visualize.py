@@ -55,7 +55,7 @@ def genDateRange():
 def genPredictDateRange():
     import datetime
     start_date = datetime.date(2021,1,1)
-    end_date = datetime.date(2021,10,1)
+    end_date = datetime.date(2022,12,1)
     date_range = pd.date_range(start_date, end_date)
     date_range = date_range[date_range.day==1]
     return date_range
@@ -144,10 +144,7 @@ for i, k in enumerate(phaseX[:-1]):
 finalPhase = glass + labor
 ptCost.append(finalPhase)
 
-print(ptCost)
-exit(0)
-
-tcostFig = px.bar(x=phaseX,y=ptCost,labels={'x':'Floor', 'y':'Total Cost'},text=x)
+tcostFig = px.bar(x=phaseX,y=ptCost,labels={'x':'Floor', 'y':'Total Cost'})
 tcostFig.update_layout(title_text="Predcited Total Cost by Floor (3 months)")
 
 
@@ -155,7 +152,7 @@ tcostFig.update_layout(title_text="Predcited Total Cost by Floor (3 months)")
 preFig = make_subplots(rows=rnum, cols=cnum, shared_xaxes=False, shared_yaxes=False)
 
 for i, (k, v) in enumerate(predict.items()):
-    nrow = i + 1
+    nrow = i + 1 
     ncol = 1
     
     subfig = go.Scattergl(x=genPredictDateRange(),y=v,name=k)
@@ -168,7 +165,7 @@ for i, (k, v) in enumerate(predict.items()):
         row=nrow,
         col=ncol)
 
-preFig.update_layout(title="Predicted Material Cost")
+preFig.update_layout(title="Predicted Material Cost",height=600)
 
 
 ### material ###
@@ -184,7 +181,7 @@ with open('testMaterial.txt', 'r') as d:
         # [round(math.log(10, int(h)),2) for h in history]
         final[name] = history
 
-### material cost ###
+### material cost predcited ###
 costFig = make_subplots(rows=rnum, cols=ncol, shared_xaxes=False, shared_yaxes=False)
 
 for i, (k, v) in enumerate(final.items()):
@@ -195,9 +192,7 @@ for i, (k, v) in enumerate(final.items()):
     name = k.split("_")[1]
     if k == "SALARY" or k == "GLASS":
         continue
-    if name in com:
-        v = [com[name]*1.4*d for d in v]
-    else:
+    if name not in com:
         continue
     
     subfig = go.Scattergl(x=genDateRange(),y=v,name=k)
@@ -210,7 +205,7 @@ for i, (k, v) in enumerate(final.items()):
         row=nrow,
         col=ncol)
 
-costFig.update_layout(title="Volume Concrete Price")
+costFig.update_layout(title="Volume Concrete Price",height=600)
 
 
 ### material price history ###
@@ -230,7 +225,7 @@ for i, (k, v) in enumerate(final.items()):
         row=nrow,
         col=ncol)
 
-fig.update_layout(title="Volume Concrete Price Hisotry")
+fig.update_layout(title="Volume Concrete Price Hisotry",height=600)
 
 
 ## do NOT modify the following code
@@ -251,10 +246,10 @@ app.layout = html.Div(children=[
         figure=preFig
     ),
 
-    dcc.Graph(
-        id='material-price',
-        figure=costFig
-    ),
+    # dcc.Graph(
+    #     id='material-price',
+    #     figure=costFig
+    # ),
 
      dcc.Graph(
         id='material-cost',
