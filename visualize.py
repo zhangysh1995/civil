@@ -107,12 +107,12 @@ cnum = 1
 
 # density of each material
 com = {
-    "AGG": 1252,
+    "AGG": 1252/1000,
     # 0.025 * 8000
     "SR": 200, 
-    "CEMENT": 461,
-    "SAND": 512,
-    "WATER": 175,
+    "CEMENT": 461/1000,
+    "SAND": 512/1000,
+    "WATER": 175/1000,
     "GLASS": 1,
     "SALARY": 300
 }
@@ -122,28 +122,33 @@ phaseX = ["G/F", "1/F", "2/F", "3/F", "4/F", "5/F","RF", "Curtain Wall"]
 ptCost = []
 
 glass = 0
+labor = 0
 for i, k in enumerate(phaseX[:-1]):
     vol = phaseMaterial[k]
     conVol = vol["CONCRETE"]
     glassVol = vol["GLASS"]
     conTotal = conVol * \
-        (1.4 * 
+        ( 1 * 
         ( com["AGG"]*price["agg"][i] \
             + com["CEMENT"]*price["cement"][i] \
             + com["SAND"]*price["sand"][i] \
             + com["WATER"]*7.11 
         ) \
-        + 0.025*8000*price["sr"][i] )
-    labor = com["SALARY"] * price["salary"][i]
+        + price["sr"][i] )
+    if i == 0:
+        labor = com["SALARY"] * price["salary"][i]
     floorCost = labor + conTotal
     ptCost.append(floorCost)
     glass = glass + 300 + glassVol * 1 * ( price["glass"][-1]*5)
 
-finalPhase = glass + price["salary"][-1]*com["SALARY"]
+finalPhase = glass + labor
 ptCost.append(finalPhase)
 
-tcostFig = px.bar(x=phaseX,y=ptCost, labels={'x':'Floor', 'y':'Total Cost'})
-tcostFig.update_layout(title_text="Total Cost by Floor")
+print(ptCost)
+exit(0)
+
+tcostFig = px.bar(x=phaseX,y=ptCost,labels={'x':'Floor', 'y':'Total Cost'},text=x)
+tcostFig.update_layout(title_text="Predcited Total Cost by Floor (3 months)")
 
 
 ### predicted total cost ###
