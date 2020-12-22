@@ -19,7 +19,7 @@ price = {
     "water": []
 }
 
-with open('fixMaterial.txt', 'r') as d:
+with open('materialPredict.txt', 'r') as d:
     amount = d.readlines()
     d.close()
     for line in amount:
@@ -143,10 +143,9 @@ for i, k in enumerate(phaseX[:-1]):
 
 finalPhase = glass + labor
 ptCost.append(finalPhase)
-print(ptCost)
-exit(0)
+
 tcostFig = px.bar(x=phaseX,y=ptCost,labels={'x':'Floor', 'y':'Total Cost'})
-tcostFig.update_layout(title_text="Actual Total Cost by Floor (Starting from 2018.01, 3 months)")
+tcostFig.update_layout(title_text="Predcited Total Cost by Floor (3 months)")
 
 
 ### predicted total cost ###
